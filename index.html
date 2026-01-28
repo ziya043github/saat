@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="az">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dünya Saatı</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Başlıq -->
+      <div class="header">
+        <h1>Dünya Saatı</h1>
+        <p>İstədiyiniz şəhərin saatını öyrənin</p>
+        <div class="project-badge" aria-label="Project">💻 Ziya Project 🚀</div>
+      </div>
+
+      <!-- Axtarış bölməsi -->
+      <div class="search-section">
+        <div class="search-box">
+          <input
+            type="text"
+            id="cityInput"
+            placeholder="Şəhər adını daxil edin (məs: Bakı, London, Tokyo)..."
+            autocomplete="off"
+          />
+          <div id="suggestions" class="suggestions-list"></div>
+          <div
+            id="errorMessage"
+            class="error-message"
+            style="display: none"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Favorit şəhərlər -->
+      <div class="favorites-section">
+        <h3>Sevdiklərim</h3>
+        <div id="favoritesList" class="favorites-list"></div>
+      </div>
+
+      <!-- Saat ekranı -->
+      <div class="clock-display">
+        <div id="clockBackground" class="clock-background layer-a"></div>
+        <div id="clockBackgroundB" class="clock-background layer-b"></div>
+        <div class="clock-content">
+          <div class="city-info">
+            <h2 id="cityName">Şəhər seçin</h2>
+            <p id="countryName"></p>
+          </div>
+          <div class="time-display">
+            <div id="digitalClock" class="digital-clock">00:00:00</div>
+          </div>
+          <div class="analog-wrap" aria-hidden="true">
+            <div class="analog-clock">
+              <div class="hand hour" id="handHour"></div>
+              <div class="hand minute" id="handMinute"></div>
+              <div class="hand second" id="handSecond"></div>
+              <div class="center-dot"></div>
+              <div class="tick t12"></div>
+              <div class="tick t3"></div>
+              <div class="tick t6"></div>
+              <div class="tick t9"></div>
+            </div>
+          </div>
+          <button id="favoriteBtn" class="favorite-btn" style="display: none">
+            ♡
+          </button>
+        </div>
+      </div>
+
+      <!-- Məlumat bölməsi -->
+      <div class="info-section">
+        <div id="infoContent" class="info-content">
+          <p>Şəhər axtarışına başlayın</p>
+        </div>
+      </div>
+
+      <!-- Lokal saat -->
+      <div class="local-time">
+        <h3>Sizin Cihazınız</h3>
+        <p id="localTime" class="local-time-display">00:00:00</p>
+        <p id="localTimeZone" class="local-timezone"></p>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
