@@ -1,6 +1,4 @@
-/* Dünya Saatı — HTML/CSS/JS (Nominatim + Open‑Meteo) */
 
-// DOM
 const cityInput = document.getElementById('cityInput');
 const suggestionsList = document.getElementById('suggestions');
 const clockContainer = document.getElementById('digitalClock');
@@ -18,16 +16,15 @@ const handHour = document.getElementById('handHour');
 const handMinute = document.getElementById('handMinute');
 const handSecond = document.getElementById('handSecond');
 
-// State
-let currentPlace = null; // { key, city, admin, country, lat, lon, tz }
+let currentPlace = null; 
 let favorites = [];
 let cityTimeInterval = null;
 let lastSuggestions = [];
-const imageCache = new Map(); // key -> url
+const imageCache = new Map(); 
 
 const STORAGE_KEY_FAVS = 'worldClock.favorites.v1';
 const STORAGE_KEY_LAST = 'worldClock.lastPlace.v1';
-let bgToggle = 0; // 0 -> A active, 1 -> B active
+let bgToggle = 0; 
 
 window.addEventListener('load', () => {
     loadFavorites();
@@ -38,7 +35,6 @@ window.addEventListener('load', () => {
     updateBackgroundMode();
     setInterval(updateBackgroundMode, 60000);
 
-    // Son seçimi aç, yoxdursa Bakı
     const last = loadLastPlace();
     if (last) {
         usePlace(last, { persist: false, fromFavorites: true });
@@ -46,7 +42,6 @@ window.addEventListener('load', () => {
         selectByQuery('Bakı');
     }
 
-    // default bg layer visibility
     if (clockBackground) clockBackground.classList.add('is-active', 'kenburns');
 });
 
@@ -121,10 +116,8 @@ async function searchAndSuggest(query) {
     hideError();
 
     try {
-        // AZ prioritet: (ə,ğ,ı,ö,ü,ç,ş) varsa və ya bilinən AZ şəhər adıdır
         const preferAZ = shouldPreferAzerbaijan(query);
 
-        // 1) AZ (lazımdırsa) -> 2) Global fallback
         const results =
             preferAZ ? await geocodeNominatim(query, { countrycodes: 'az' }) : [];
 
@@ -183,7 +176,6 @@ async function selectByQuery(query) {
             return;
         }
 
-        // Birdən çox nəticə varsa: dropdown-da saxla ki istifadəçi seçsin
         if (merged.length > 1) {
             lastSuggestions = merged.slice(0, 8);
             setSuggestions(lastSuggestions);
@@ -222,21 +214,17 @@ function usePlace(place, { persist, fromFavorites }) {
     favoriteBtn.style.display = 'block';
     updateFavoriteBtnState();
 
-    // background image (Wikipedia/Wikimedia -> Unsplash fallback)
     setBackgroundForPlace(place).catch((err) => {
         console.log('Şəkil yüklənmədi:', err);
-        // Qeyd: file:// ilə açanda browser fetch-i bloklaya bilər
         showError('Şəkil yüklənmədi. Saytı local server ilə açın (məs: python -m http.server 5500).');
         setBackgroundWithCrossfade(null);
     });
 
-    // interval
     if (cityTimeInterval) clearInterval(cityTimeInterval);
     updateCityTimeAndAnalog();
     displayCityInfo();
     cityTimeInterval = setInterval(() => {
         updateCityTimeAndAnalog();
-        // info-dakı tarix/offset dinamik qalsın
         displayCityInfo();
     }, 1000);
 
@@ -249,10 +237,8 @@ function updateCityTimeAndAnalog() {
     const now = new Date();
     const tz = currentPlace.tz;
 
-    // Digital
     clockContainer.textContent = formatClockHHMMSS(now, tz);
 
-    // Analog
     const parts = new Intl.DateTimeFormat('en-GB', {
         timeZone: tz,
         hour: '2-digit',
@@ -281,7 +267,7 @@ function displayCityInfo() {
     const tz = currentPlace.tz;
 
     const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const localOffsetMin = -now.getTimezoneOffset(); // minutes east of UTC
+    const localOffsetMin = -now.getTimezoneOffset();
     const cityOffsetMin = getOffsetMinutesForTimezone(tz, now);
     const diffMin = cityOffsetMin - localOffsetMin;
 
@@ -324,7 +310,6 @@ function displayCityInfo() {
     `;
 }
 
-// Favorites
 favoriteBtn.addEventListener('click', () => {
     if (!currentPlace) return;
     const idx = favorites.findIndex((f) => f.key === currentPlace.key);
@@ -402,7 +387,7 @@ function saveLastPlace(place) {
     try {
         localStorage.setItem(STORAGE_KEY_LAST, JSON.stringify(place));
     } catch {
-        // ignore
+        
     }
 }
 
@@ -415,7 +400,7 @@ function loadLastPlace() {
     }
 }
 
-// API helpers
+
 async function geocodeNominatim(query, { countrycodes, limit = 8 }) {
     const url = new URL('https://nominatim.openstreetmap.org/search');
     url.searchParams.set('format', 'jsonv2');
@@ -529,7 +514,7 @@ function formatClockHHMMSS(date, timeZone) {
 }
 
 function getOffsetMinutesForTimezone(timeZone, date) {
-    // Intl shortOffset: "GMT+4" / "GMT+04:00" kimi çıxır
+    
     const tzPart = new Intl.DateTimeFormat('en-US', {
         timeZone,
         timeZoneName: 'shortOffset',
@@ -575,7 +560,7 @@ function setBackgroundWithCrossfade(url) {
     if (!a || !b) return;
 
     if (!url) {
-        // şəkil yoxdursa, ən azından default gradient görünsün
+        
         a.style.backgroundImage = '';
         b.style.backgroundImage = '';
         a.classList.add('is-active');
@@ -586,18 +571,17 @@ function setBackgroundWithCrossfade(url) {
     const nextEl = bgToggle === 0 ? b : a;
     const prevEl = bgToggle === 0 ? a : b;
 
-    // prepare next layer
+    
     nextEl.classList.remove('kenburns');
     nextEl.style.backgroundImage = `url('${url}')`;
 
-    // force reflow so opacity transition triggers reliably
-    // eslint-disable-next-line no-unused-expressions
+    
     nextEl.offsetHeight;
 
     nextEl.classList.add('is-active');
     prevEl.classList.remove('is-active');
 
-    // subtle ken-burns zoom on active layer
+    
     requestAnimationFrame(() => {
         nextEl.classList.add('kenburns');
     });
@@ -606,13 +590,13 @@ function setBackgroundWithCrossfade(url) {
 }
 
 async function fetchBestImageUrl(primaryQuery, fallbackQuery) {
-    // 1) Wikipedia search -> summary thumbnail (açar tələb etmir, origin=* CORS üçün)
+    
     const wikiUrl = await tryWikipediaImage(primaryQuery) || await tryWikipediaImage(fallbackQuery);
     if (wikiUrl) return wikiUrl;
 
-    // 2) Unsplash “source” fallback (açar tələb etmir)
+    
     const q = String(primaryQuery || fallbackQuery || '').trim() || 'city';
-    // Daha çox uzaqdan görünüş üçün açar sözlər əlavə edirik
+    
     const enriched = `${q} skyline cityscape panorama historic`;
     return `https://source.unsplash.com/1600x900/?${encodeURIComponent(enriched)}`;
 }
@@ -621,7 +605,7 @@ async function tryWikipediaImage(query) {
     const q = String(query || '').trim();
     if (!q) return null;
 
-    // Search for best matching page title
+    
     const searchUrl = new URL('https://en.wikipedia.org/w/api.php');
     searchUrl.searchParams.set('action', 'query');
     searchUrl.searchParams.set('list', 'search');
@@ -635,14 +619,13 @@ async function tryWikipediaImage(query) {
     const sData = await sRes.json();
     const title = sData?.query?.search?.[0]?.title;
     if (!title) return null;
-
-    // Şəkil seçimi: MediaWiki Action API ilə stabildir (REST page/media 404 verə bilir)
+)
     const best = await getBestWikiImageForTitle(title);
     return best;
 }
 
 async function getBestWikiImageForTitle(title) {
-    // 1) Səhifədə istifadə olunan şəkillərin siyahısı
+    
     const listUrl = new URL('https://en.wikipedia.org/w/api.php');
     listUrl.searchParams.set('action', 'query');
     listUrl.searchParams.set('titles', title);
@@ -658,17 +641,17 @@ async function getBestWikiImageForTitle(title) {
     const page = pages[0];
     const images = page?.images || [];
 
-    // Filtrlə: yalnız foto tipli fayllar
+    
     const fileTitles = images
         .map((x) => x?.title)
         .filter((t) => typeof t === 'string' && t.startsWith('File:'))
-        .filter((t) => /\.(jpe?g|png|webp)\b/i.test(t)) // SVG çıxır
+        .filter((t) => /\.(jpe?g|png|webp)\b/i.test(t)) 
         .filter((t) => !/flag|coat of arms|seal|logo|map|locator|location|emblem/i.test(t))
         .slice(0, 40);
 
     if (fileTitles.length === 0) return null;
 
-    // 2) Şəkil URL + metadata (extmetadata) al
+    
     const infoUrl = new URL('https://en.wikipedia.org/w/api.php');
     infoUrl.searchParams.set('action', 'query');
     infoUrl.searchParams.set('titles', fileTitles.join('|'));
@@ -702,7 +685,7 @@ async function getBestWikiImageForTitle(title) {
 
     if (candidates.length === 0) return null;
 
-    // 3) Scoring: şəhər uzaqdan görünüşü / landmark / historic; flag/map/logo və s. kəs
+    
     let best = null;
     let bestScore = -Infinity;
     for (const c of candidates) {
@@ -713,7 +696,7 @@ async function getBestWikiImageForTitle(title) {
         }
     }
 
-    // Çox zəifdirsə, wiki-dan vaz keçək (fallback Unsplash)
+   
     if (!best || bestScore < 8) return null;
     return best.url;
 }
@@ -745,7 +728,7 @@ function scoreWikiCandidate({ fileTitle, width, height, desc, categories, keywor
     ];
     for (const w of badSoft) if (text.includes(w)) score -= 4;
 
-    // landşaft üstün
+    
     if (width && height) {
         const ratio = width / height;
         if (ratio >= 1.35) score += 8;
@@ -754,7 +737,7 @@ function scoreWikiCandidate({ fileTitle, width, height, desc, categories, keywor
         if (Math.max(width, height) >= 1200) score += 2;
     }
 
-    // Description/keywords varsa bonus
+    
     if (String(desc || '').trim()) score += 2;
     if (String(keywords || '').trim()) score += 1;
 
@@ -824,3 +807,4 @@ function showError(message) {
 function hideError() {
     errorMessage.style.display = 'none';
 }
+
