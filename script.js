@@ -597,7 +597,7 @@ async function fetchBestImageUrl(primaryQuery, fallbackQuery) {
     
     const q = String(primaryQuery || fallbackQuery || '').trim() || 'city';
     
-    const enriched = `${q} skyline cityscape panorama historic`;
+    const enriched = `${q} skyline cityscape panorama historic ${boostKeywordsForQuery(q)}`.trim();
     return `https://source.unsplash.com/1600x900/?${encodeURIComponent(enriched)}`;
 }
 
@@ -605,28 +605,20 @@ async function tryWikipediaImage(query) {
     const q = String(query || '').trim();
     if (!q) return null;
 
-    
-    const searchUrl = new URL('https://en.wikipedia.org/w/api.php');
-    searchUrl.searchParams.set('action', 'query');
-    searchUrl.searchParams.set('list', 'search');
-    searchUrl.searchParams.set('srsearch', q);
-    searchUrl.searchParams.set('srlimit', '1');
-    searchUrl.searchParams.set('format', 'json');
-    searchUrl.searchParams.set('origin', '*');
-
-    const sRes = await fetch(searchUrl.toString(), { headers: { 'Accept': 'application/json' } });
-    if (!sRes.ok) return null;
-    const sData = await sRes.json();
-    const title = sData?.query?.search?.[0]?.title;
-    if (!title) return null;
-)
-    const best = await getBestWikiImageForTitle(title);
-    return best;
+    const langs = ['en', 'az', 'tr'];
+    for (const lang of langs) {
+        const title = await searchWikiTitle(q, lang);
+        if (!title) continue;
+        const lead = await getLeadWikiImageForTitle(title, lang);
+        if (lead) return lead;
+        const best = await getBestWikiImageForTitle(title, lang);
+        if (best) return best;
+    }
+    return null;
 }
 
-async function getBestWikiImageForTitle(title) {
-    
-    const listUrl = new URL('https://en.wikipedia.org/w/api.php');
+async function getBestWikiImageForTitle(title, lang = 'en') {
+    const listUrl = new URL(`https://${lang}.wikipedia.org/w/api.php`);
     listUrl.searchParams.set('action', 'query');
     listUrl.searchParams.set('titles', title);
     listUrl.searchParams.set('prop', 'images');
@@ -652,7 +644,7 @@ async function getBestWikiImageForTitle(title) {
     if (fileTitles.length === 0) return null;
 
     
-    const infoUrl = new URL('https://en.wikipedia.org/w/api.php');
+    const infoUrl = new URL(`https://${lang}.wikipedia.org/w/api.php`);
     infoUrl.searchParams.set('action', 'query');
     infoUrl.searchParams.set('titles', fileTitles.join('|'));
     infoUrl.searchParams.set('prop', 'imageinfo');
@@ -699,6 +691,42 @@ async function getBestWikiImageForTitle(title) {
    
     if (!best || bestScore < 8) return null;
     return best.url;
+}
+
+async function searchWikiTitle(q, lang = 'en') {
+    const searchUrl = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+    searchUrl.searchParams.set('action', 'query');
+    searchUrl.searchParams.set('list', 'search');
+    searchUrl.searchParams.set('srsearch', q);
+    searchUrl.searchParams.set('srlimit', '1');
+    searchUrl.searchParams.set('format', 'json');
+    searchUrl.searchParams.set('origin', '*');
+    const sRes = await fetch(searchUrl.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!sRes.ok) return null;
+    const sData = await sRes.json();
+    const title = sData?.query?.search?.[0]?.title;
+    return title || null;
+}
+
+async function getLeadWikiImageForTitle(title, lang = 'en') {
+    const leadUrl = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+    leadUrl.searchParams.set('action', 'query');
+    leadUrl.searchParams.set('titles', title);
+    leadUrl.searchParams.set('prop', 'pageimages');
+    leadUrl.searchParams.set('pithumbsize', '1600');
+    leadUrl.searchParams.set('format', 'json');
+    leadUrl.searchParams.set('origin', '*');
+    const lRes = await fetch(leadUrl.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!lRes.ok) return null;
+    const data = await lRes.json();
+    const pages = data?.query?.pages ? Object.values(data.query.pages) : [];
+    const page = pages[0];
+    const src = page?.thumbnail?.source || null;
+    if (!src) return null;
+    if (/\\.svg(\\?|$)/i.test(src)) return null;
+    const t = src.toLowerCase();
+    if (/flag|coat%20of%20arms|coat_of_arms|seal|emblem|logo|map|locator|location/.test(t)) return null;
+    return src;
 }
 
 function scoreWikiCandidate({ fileTitle, width, height, desc, categories, keywords }) {
@@ -788,6 +816,19 @@ function normalizeAz(s) {
         .replace(/ğ/g, 'g')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function boostKeywordsForQuery(q) {
+    const n = normalizeAz(String(q || '').toLowerCase());
+    if (!n) return '';
+    if (/(baki|baku)/.test(n)) return 'Flame Towers Heydar Aliyev Center old city boulevard';
+    if (/london/.test(n)) return 'Big Ben Tower Bridge London Eye skyline';
+    if (/istanbul/.test(n)) return 'Hagia Sophia Bosphorus Galata skyline';
+    if (/paris/.test(n)) return 'Eiffel Tower Seine skyline';
+    if (/(new york|nyc)/.test(n)) return 'Manhattan skyline Brooklyn Bridge';
+    if (/rome/.test(n)) return 'Colosseum Vatican skyline';
+    if (/tokyo/.test(n)) return 'Tokyo Tower Shibuya skyline';
+    return '';
 }
 
 function escapeHtml(str) {
